@@ -1,7 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 import { MENU_ITEMS } from "../constants";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Safely initialize the AI client
+const apiKey = process.env.API_KEY;
+let ai: GoogleGenAI | null = null;
+
+if (apiKey) {
+  try {
+    ai = new GoogleGenAI({ apiKey });
+  } catch (error) {
+    console.error("Gemini AI initialization failed:", error);
+  }
+}
 
 const SYSTEM_INSTRUCTION = `
 Вы — персональный менеджер по работе с корпоративными клиентами службы доставки "Хоттэй" (B2B).
@@ -20,13 +30,18 @@ ${JSON.stringify(MENU_ITEMS.map(i => ({ name: i.name, id: i.id, desc: i.descript
 `;
 
 export const getGeminiRecommendation = async (userPrompt: string): Promise<string> => {
+  if (!ai) {
+    console.warn("Gemini API Key is missing or invalid.");
+    return "Система ИИ временно недоступна (требуется настройка API ключа). Пожалуйста, выберите блюда из меню самостоятельно.";
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: userPrompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.7, // Slightly lower temperature for more professional consistency
+        temperature: 0.7,
       }
     });
 
